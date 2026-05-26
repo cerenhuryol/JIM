@@ -39,8 +39,12 @@ value_added <- readxl::read_excel(input_file, sheet = "Value Added")
 
 ## 1. Clean Data  
 
-ghg <- ghg %>%
-  clean_names()
+ghg_clean <- ghg %>%
+  clean_names() %>%
+  filter(
+    !str_detect(str_to_lower(sub_indicator), "other"),
+    !str_detect(str_to_lower(sub_indicator), "removal")
+  )
 
 ghg <- ghg %>%
    mutate(across(c(revenue, total, outstanding_amount, attributed_total_outstanding),
@@ -116,8 +120,62 @@ value_added <- value_added %>%
    scale_fill_viridis_c(na.value = "grey90") +
    labs(title = "GHG Emissions by Country",
         fill = "Total emissions") 
- 
 
+
+
+
+ ghg <- ghg %>%
+  mutate(
+    gas_type = case_when(
+      grepl("Non-CO2", sub_indicator, ignore.case = TRUE) ~ "Non-CO2",
+      grepl("CO2", sub_indicator, ignore.case = TRUE) ~ "CO2"
+    ),
+    emission_category = case_when(
+      grepl("Scope 1", sub_indicator, ignore.case = TRUE) ~ "Scope 1",
+      grepl("Scope 2", sub_indicator, ignore.case = TRUE) ~ "Scope 2",
+      grepl("Scope 3", sub_indicator, ignore.case = TRUE) ~ "Scope 3"
+      )
+    )
+
+
+
+
+ghg_by_scope <- ghg %>%
+  group_by(scope, sub_scope, emission_category, gas_type) %>%
+  summarise(total_ghg = sum(total, na.rm = TRUE), .groups = "drop")
+
+ghg_by_country <- ghg %>%
+  group_by(country_name, iso_alpha3_code) %>%
+  summarise(total_ghg = sum(total, na.rm = TRUE), .groups = "drop") %>%
+  arrange(desc(total_ghg))
+
+ghg_by_sector <- ghg %>%
+  group_by(economic_activity) %>%
+  summarise(total_ghg = sum(total, na.rm = TRUE), .groups = "drop") %>%
+  arrange(desc(total_ghg))
+
+top_contributors <- ghg %>%
+  group_by(country_name, economic_activity, sub_indicator) %>%
+  summarise(total_ghg = sum(total, na.rm = TRUE), .groups = "drop") %>%
+  arrange(desc(total_ghg)) %>%
+  slice_head(n = 10)
+
+
+
+kpis <- tibble::tibble(
+  metric = c(
+    "Total GHG",
+    "Attributed GHG",
+    "GHG per revenue",
+    "GHG per outstanding amount"
+  ),
+  value = c(
+    sum(ghg_clean$total, na.rm = TRUE),
+    sum(ghg_clean$attributed_total, na.rm = TRUE),
+    sum(ghg_clean$total, na.rm = TRUE) / sum(ghg_clean$revenue, na.rm = TRUE),
+    sum(ghg_clean$total, na.rm = TRUE) / sum(ghg_clean$outstanding_amount, na.rm = TRUE)
+  )
+)
 
 ## 3. Employment 
 
