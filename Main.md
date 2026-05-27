@@ -21,7 +21,7 @@ library(janitor)
 library(readr)
 
 
-
+## Change direction to your local directory
 setwd("C:/Users/CerenHüryolJIMFounda/OneDrive - Stichting Joint Impact Model/Documents/JIM Outputs")
 
 input_file <- "member_project_output.xlsx"
@@ -38,6 +38,25 @@ value_added <- readxl::read_excel(input_file, sheet = "Value Added")
 
 
 ## 1. Clean Data  
+
+
+general <- general %>%
+  clean_names()
+
+general <- general %>%
+  mutate(client_name_code = as.character(client_name_code))
+
+general <- general %>%
+  mutate(across(c(revenue, total, outstanding_amount, attributed_total_outstanding),
+                 ~as.numeric(str_replace(., ",", "."))))
+
+
+general <- general %>%
+  filter(country_name != "Bangladesh")
+
+general <- general %>%
+  filter(economic_activity != "Paddy rice")
+
 
 ghg_clean <- ghg %>%
   clean_names() %>%
@@ -103,7 +122,7 @@ value_added <- value_added %>%
 ### Aggregate emissions by country
 
    country_emissions <- ghg %>%
-   group_by(country_name) %>%
+   group_by(country_name, iso_alpha3_code) %>%
    summarise(total_emissions = sum(total, na.rm = TRUE), .groups = "drop") %>%
    arrange(desc(total_emissions))
 
@@ -113,6 +132,11 @@ value_added <- value_added %>%
  # join with map
  map_data <- world %>%
    left_join(country_emissions, by = c("name" = "country_name"))
+
+# Africa map
+# africa_map <- ne_countries(continent = "Africa", returnclass = "sf")
+# map_data <- africa_map %>% 
+# left_join(country_emissions, by = c("iso_a3" = "iso_alpha3_code"))
  
  # plot
  ggplot(map_data) +
@@ -120,8 +144,6 @@ value_added <- value_added %>%
    scale_fill_viridis_c(na.value = "grey90") +
    labs(title = "GHG Emissions by Country",
         fill = "Total emissions") 
-
-
 
 
  ghg <- ghg %>%
@@ -139,6 +161,7 @@ value_added <- value_added %>%
 
 
 
+## 2.1  Aggregations 
 
 ghg_by_scope <- ghg %>%
   group_by(scope, sub_scope, emission_category, gas_type) %>%
@@ -170,12 +193,48 @@ kpis <- tibble::tibble(
     "GHG per outstanding amount"
   ),
   value = c(
-    sum(ghg_clean$total, na.rm = TRUE),
-    sum(ghg_clean$attributed_total, na.rm = TRUE),
-    sum(ghg_clean$total, na.rm = TRUE) / sum(ghg_clean$revenue, na.rm = TRUE),
-    sum(ghg_clean$total, na.rm = TRUE) / sum(ghg_clean$outstanding_amount, na.rm = TRUE)
+    sum(ghg$total, na.rm = TRUE),
+    sum(ghg$attributed_total, na.rm = TRUE),
+    sum(ghg$total, na.rm = TRUE) / sum(ghg$revenue, na.rm = TRUE),
+    sum(ghg$total, na.rm = TRUE) / sum(ghg$outstanding_amount, na.rm = TRUE)
   )
 )
+
+
+## 2.2 Visualize the prepared data - Totals 
+
+ggplot(analysis$by_scope, aes(
+  x = emission_scope,
+  y = attributed_ghg,
+  fill = gas_type
+)) +
+  geom_col() +
+  labs(
+    title = "Attributed GHG by Scope",
+    x = NULL,
+    y = "Attributed GHG",
+    fill = "Gas type"
+  ) +
+  theme_minimal()
+
+ ## Analysis by sub-scope and scope 
+
+analysis$by_scope_subscope %>%
+  mutate(scope_label = paste(scope, sub_scope, emission_scope, gas_type, sep = " | ")) %>%
+  ggplot(aes(
+    x = reorder(scope_label, attributed_ghg),
+    y = attributed_ghg
+  )) +
+  geom_col(fill = "#2C7FB8") +
+  coord_flip() +
+  labs(
+    title = "Attributed GHG by Scope and Sub-scope",
+    x = NULL,
+    y = "Attributed GHG"
+  ) +
+  theme_minimal()
+
+
 
 ## 3. Employment 
 
