@@ -65,7 +65,7 @@ ghg_clean <- ghg %>%
     sub_indicator = as.character(sub_indicator),
     scope = as.character(scope),
     sub_scope = as.character(sub_scope),
-    country = as.character(country),
+    country_name = as.character(country_name),
     economic_activity = as.character(economic_activity),
     total = as.numeric(total)
   ) %>%
