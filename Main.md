@@ -443,6 +443,10 @@ scope_activity_chart <- scope_activity_summary %>%
 scope_activity_chart
 
 
+
+
+
+
 ## Stacked bar
 
 
@@ -474,6 +478,59 @@ scope_activity_share_chart
 
 
 
+##
+
+df_top10_scopes <- ghg_clean %>%
+  mutate(
+    scope_group = case_when(
+      str_detect(str_to_lower(sub_indicator), "scope 1") ~ "Scope 1",
+      str_detect(str_to_lower(sub_indicator), "scope 2") ~ "Scope 2",
+      str_detect(str_to_lower(sub_indicator), "scope 3") &
+        str_detect(str_to_lower(sub_indicator), "upstream") ~ "Scope 3 Upstream",
+      str_detect(str_to_lower(sub_indicator), "scope 3") &
+        str_detect(str_to_lower(sub_indicator), "downstream") ~ "Scope 3 Downstream",
+      str_detect(str_to_lower(sub_indicator), "scope 3") &
+        str_detect(str_to_lower(sub_indicator), "imports") ~ "Scope 3 Upstream",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(scope_group)) %>%
+  group_by(economic_activity, scope_group) %>%
+  summarise(
+    emissions = sum(total, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  group_by(economic_activity) %>%
+  mutate(total_sector_emissions = sum(emissions, na.rm = TRUE)) %>%
+  ungroup() %>%
+  filter(
+    economic_activity %in%
+      unique(
+        arrange(
+          distinct(., economic_activity, total_sector_emissions),
+          desc(total_sector_emissions)
+        )$economic_activity
+      )[1:10]
+  )
+
+ggplot(df_top10_scopes, aes(x = emissions, y = economic_activity, fill = scope_group)) +
+  geom_col() +
+  scale_fill_manual(
+    values = c(
+      "Scope 1" = "#53C6B9",
+      "Scope 2" = "#9ecae1",
+      "Scope 3 Upstream" = "#005A81",
+      "Scope 3 Downstream" = "#08306B"  # darker blue
+    )
+  ) +
+  scale_y_discrete(labels = function(x) stringr::str_wrap(x, width = 30)) +
+  labs(
+    title = "Top 10 sectors by total GHG emissions",
+    x = "Total emissions",
+    y = "Sector",
+    fill = "Scope"
+  ) +
+  theme_minimal()
 
 
 ## 4. Employment 
