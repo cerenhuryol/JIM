@@ -14,12 +14,11 @@ library(sf)
 library(collapse)
 library(tidyverse)
 library(writexl)
-install.packages(c("rnaturalearth", "rnaturalearthdata"))
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(janitor)
 library(readr)
-
+library(scales)
 
 ## Change direction to your local directory
 setwd("C:/Users/CerenHüryolJIMFounda/OneDrive - Stichting Joint Impact Model/Documents/JIM Outputs")
@@ -472,7 +471,12 @@ scope_activity_share_chart <- scope_activity_summary %>%
 
 scope_activity_share_chart
 
-## 3. Employment 
+
+
+
+
+
+## 4. Employment 
 
 
 employment_total <- employment %>%
