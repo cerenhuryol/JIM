@@ -56,9 +56,8 @@ general <- general %>%
 general <- general %>%
   filter(economic_activity != "Paddy rice")
 
-
-
-  
+ghg <- ghg %>%
+  clean_names()
 
 ghg_clean <- ghg %>%
   mutate(
